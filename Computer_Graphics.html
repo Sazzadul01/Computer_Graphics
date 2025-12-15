@@ -1,0 +1,293 @@
+// Kiash
+#include <windows.h>
+#include <GL/glut.h>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+
+float cloudX[4] = {-300, -100, 200, 450};
+float cloudSpeed[4] = {0.3, 0.25, 0.22, 0.28};
+
+float peopleX[20];
+float peopleDir[20];
+float legPhase[20];
+float armPhase[20];
+int peopleItem[20];
+bool peopleTrade[20];
+float tradeTimer[20];
+
+float boatX[5] = {-600, -300, 0, 400, 800};
+float boatSpeed[5] = {0.7, 0.9, 0.6, 0.8, 0.75};
+
+float bikeX = -550;
+float bikeWheelAngle = 0;
+
+float waveTime = 0;
+
+bool isNight = false;
+float dayTimer = 0;
+
+void filledRect(float x, float y, float w, float h){
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x+w, y);
+    glVertex2f(x+w, y+h);
+    glVertex2f(x, y+h);
+    glEnd();
+}
+
+void drawCircle(float x, float y, float r){
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(x, y);
+    for(int i=0;i<=32;i++){
+        float a = 2*3.1416f*i/32;
+        glVertex2f(x+r*cos(a), y+r*sin(a));
+    }
+    glEnd();
+}
+// Rubel
+void drawTree(float x, float y){
+    glColor3f(0.4,0.2,0.1);
+    filledRect(x,y,15,40);
+
+    glColor3f(0.1,0.6,0.2);
+    drawCircle(x+7,y+45,18);
+    drawCircle(x-5,y+40,14);
+    drawCircle(x+20,y+40,14);
+}
+
+void drawCloud(float x, float y){
+    glColor3f(1,1,1);
+    drawCircle(x,y,25);
+    drawCircle(x+30,y+8,20);
+    drawCircle(x+55,y+5,22);
+    drawCircle(x-25,y+6,18);
+}
+
+void drawBike(){
+    glPushMatrix();
+    glTranslatef(bikeX,-120,0);
+
+    glColor3f(0,0,0);
+    glPushMatrix();
+    glTranslatef(-15,0,0);
+    glRotatef(bikeWheelAngle,0,0,1);
+    drawCircle(0,0,6);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(15,0,0);
+    glRotatef(bikeWheelAngle,0,0,1);
+    drawCircle(0,0,6);
+    glPopMatrix();
+
+    glBegin(GL_LINES);
+    glVertex2f(-15,0);
+    glVertex2f(0,10);
+    glVertex2f(0,10);
+    glVertex2f(15,0);
+    glEnd();
+
+    glPopMatrix();
+}
+//parvez
+void drawBoat(float x, float y){
+    glPushMatrix();
+    glTranslatef(x, y + sin(waveTime)*6, 0);
+
+    glColor3f(0.6,0.35,0.1);
+    glBegin(GL_POLYGON);
+    glVertex2f(-70,-12);
+    glVertex2f(-50,15);
+    glVertex2f(50,15);
+    glVertex2f(70,-12);
+    glVertex2f(30,-22);
+    glVertex2f(-30,-22);
+    glEnd();
+
+    glColor3f(1,0.85,0.7);
+    drawCircle(0,25,6);
+
+    glColor3f(0,0,0);
+    glBegin(GL_LINES);
+    glVertex2f(0,20);
+    glVertex2f(0,5);
+    glVertex2f(0,12);
+    glVertex2f(25,0);
+    glEnd();
+
+    glPopMatrix();
+}
+// sazzad
+void drawPerson(int i){
+    glPushMatrix();
+    glTranslatef(peopleX[i], -130, 0);
+
+    glColor3f(1,0.85,0.7);
+    drawCircle(0,24,7);
+
+    glColor3f(0.2,0.2,0.8);
+    glBegin(GL_LINES);
+    glVertex2f(0,24);
+    glVertex2f(0,8);
+    glEnd();
+
+    float a = peopleTrade[i]?0:8*sin(armPhase[i]);
+    glColor3f(1,0.85,0.7);
+    glBegin(GL_LINES);
+    glVertex2f(0,18);
+    glVertex2f(-8+a,10);
+    glVertex2f(0,18);
+    glVertex2f(8-a,10);
+    glEnd();
+
+    float l = 10*sin(legPhase[i]);
+    glColor3f(0,0,0);
+    glBegin(GL_LINES);
+    glVertex2f(0,8);
+    glVertex2f(-6+l,-6);
+    glVertex2f(0,8);
+    glVertex2f(6-l,-6);
+    glEnd();
+
+    glTranslatef(12,8,0);
+    glColor3f(0.6,0.4,0.2);
+    filledRect(0,0,10,12);
+
+    if(peopleItem[i]==1) glColor3f(0.1,0.8,0.1);
+    else if(peopleItem[i]==2) glColor3f(1,0.3,0.3);
+    else glColor3f(1,0.8,0);
+
+    filledRect(2,2,6,6);
+
+    glPopMatrix();
+}
+//zamy
+void drawShop(float x, const char* name){
+    glColor3f(0.75,0.45,0.25);
+    filledRect(x,-110,140,90);
+
+    glColor3f(0.4,0.2,0.1);
+    filledRect(x+55,-110,30,55);
+
+    glColor3f(0.8,0,0);
+    filledRect(x+15,-15,110,30);
+
+    glColor3f(1,1,1);
+    glRasterPos2f(x+30,-2);
+    for(int i=0;name[i];i++)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,name[i]);
+}
+// sazzad
+void display(){
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    if(isNight) glColor3f(0.05,0.05,0.15);
+    else glColor3f(0.6,0.85,1);
+    filledRect(-500,0,1000,500);
+
+    if(isNight){
+        glColor3f(0.9,0.9,1);
+        drawCircle(380,380,30);
+    } else {
+        glColor3f(1,0.9,0.3);
+        drawCircle(380,380,40);
+        for(int i=0;i<4;i++) drawCloud(cloudX[i],420);
+    }
+
+    glColor3f(0.15,0.45,0.9);
+    filledRect(-500,-500,1000,360);
+
+    glColor3f(0.3,0.6,1);
+    for(float i=-600;i<600;i+=50)
+        filledRect(i,-180+8*sin(i*0.03+waveTime*3),60,12);
+
+    for(int i=0;i<5;i++) drawBoat(boatX[i],-180);
+
+    glColor3f(0.5,0.8,0.3);
+    filledRect(-500,-140,1000,140);
+
+    drawTree(-450,-140);
+    drawTree(-250,-140);
+    drawTree(50,-140);
+    drawTree(300,-140);
+
+    drawShop(-400,"Fruits");
+    drawShop(-160,"Vegetables");
+    drawShop(100,"Spices");
+    drawShop(360,"Clothes");
+
+    drawBike();
+    for(int i=0;i<20;i++) drawPerson(i);
+
+    glutSwapBuffers();
+}
+//zamy
+void timer(int){
+    waveTime += 0.05;
+
+    dayTimer += 0.03;
+    if(dayTimer>10){ isNight=!isNight; dayTimer=0; }
+
+    for(int i=0;i<4;i++){
+        cloudX[i]+=cloudSpeed[i];
+        if(cloudX[i]>600) cloudX[i]=-200;
+    }
+
+    for(int i=0;i<5;i++){
+        boatX[i]+=boatSpeed[i];
+        if(boatX[i]>700) boatX[i]=-700;
+    }
+// kiash
+    bikeX+=1.5;
+    bikeWheelAngle-=8;
+    if(bikeX>550) bikeX=-550;
+
+    for(int i=0;i<20;i++){
+        if(!peopleTrade[i]){
+            peopleX[i]+=peopleDir[i]*1.2;
+            legPhase[i]+=0.3;
+            armPhase[i]+=0.25;
+
+            if(abs(peopleX[i]+330)<20 || abs(peopleX[i]+90)<20 ||
+               abs(peopleX[i]-170)<20 || abs(peopleX[i]-430)<20){
+                peopleTrade[i]=true;
+                tradeTimer[i]=0;
+            }
+        } else {
+            tradeTimer[i]+=0.03;
+            if(tradeTimer[i]>2){
+                peopleTrade[i]=false;
+                peopleItem[i]=rand()%3+1;
+            }
+        }
+        if(peopleX[i]>480) peopleDir[i]=-1;
+        if(peopleX[i]<-480) peopleDir[i]=1;
+    }
+
+    glutPostRedisplay();
+    glutTimerFunc(30,timer,0);
+}
+//zamy
+void init(){
+    srand(time(0));
+    for(int i=0;i<20;i++){
+        peopleX[i]=-450+i*45;
+        peopleDir[i]=(i%2)?1:-1;
+        peopleItem[i]=rand()%3+1;
+        peopleTrade[i]=false;
+    }
+    gluOrtho2D(-500,500,-500,500);
+}
+
+int main(int argc,char** argv){
+    glutInit(&argc,argv);
+    glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGB);
+    glutInitWindowSize(1200,700);
+    glutCreateWindow("Village Hat Bazar");
+    init();
+    glutDisplayFunc(display);
+    glutTimerFunc(30,timer,0);
+    glutMainLoop();
+    return 0;
+}
